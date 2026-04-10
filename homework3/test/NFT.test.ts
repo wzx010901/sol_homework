@@ -1,19 +1,23 @@
 import { expect } from "chai";
-import hre from "hardhat";
+import { network } from "hardhat";
 import { getAddress, parseEther } from "viem";
+import { describe, it } from "node:test";
 
-describe("NFT Contract", function () {
+describe("NFT 合约", async function () {
+  const { viem } = await network.connect();
+
   async function deployNFTFixture() {
-    const [owner, addr1, addr2] = await hre.viem.getWalletClients();
-    const publicClient = await hre.viem.getPublicClient();
+    const [owner, addr1, addr2] = await viem.getWalletClients();
+    const publicClient = await viem.getPublicClient();
 
-    const nft = await hre.viem.deployContract("NFT", [
+    const nft = await viem.deployContract("NFT", [
       "Test NFT",
       "TNFT",
       "https://api.example.com/metadata/",
     ]);
 
     return {
+      viem,
       nft,
       owner,
       addr1,

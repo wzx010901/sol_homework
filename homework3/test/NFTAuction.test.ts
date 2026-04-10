@@ -1,54 +1,53 @@
 import { expect } from "chai";
-import hre from "hardhat";
+import { network } from "hardhat";
 import { getAddress, parseEther } from "viem";
+import { describe, it } from "node:test";
 
-describe("NFTAuction Contract", function () {
+describe("NFTAuction 合约", async function () {
+  const { viem } = await network.connect();
   const ETH_PRICE = 200000000000n;
   const TOKEN_PRICE = 100000000n;
 
   async function deployAuctionFixture() {
-    const [owner, seller, bidder1, bidder2, feeRecipient] = await hre.viem.getWalletClients();
-    const publicClient = await hre.viem.getPublicClient();
+    const [owner, seller, bidder1, bidder2, feeRecipient] = await viem.getWalletClients();
+    const publicClient = await viem.getPublicClient();
 
-    const ethUsdPriceFeed = await hre.viem.deployContract("MockV3Aggregator", [8, ETH_PRICE]);
-    const tokenUsdPriceFeed = await hre.viem.deployContract("MockV3Aggregator", [8, TOKEN_PRICE]);
+    const ethUsdPriceFeed = await viem.deployContract("MockV3Aggregator", [8, ETH_PRICE]);
+    const tokenUsdPriceFeed = await viem.deployContract("MockV3Aggregator", [8, TOKEN_PRICE]);
 
-    const priceOracle = await hre.viem.deployContract("PriceOracle", [ethUsdPriceFeed.address]);
+    const priceOracle = await viem.deployContract("PriceOracle", [ethUsdPriceFeed.address]);
 
-    const bidToken = await hre.viem.deployContract("MockERC20", [
+    const bidToken = await viem.deployContract("MockERC20", [
       "Bid Token",
       "BID",
       6,
       parseEther("1000000"),
     ]);
 
-    await priceOracle.write.addTokenPriceFeed([bidToken.address, tokenUsdPriceFeed.address]);
+    await priceOracle.write.addPriceFeed([bidToken.address, tokenUsdPriceFeed.address]);
 
-    const nft = await hre.viem.deployContract("NFT", [
+    const nft = await viem.deployContract("NFT", [
       "Auction NFT",
       "ANFT",
       "https://api.example.com/metadata/",
     ]);
 
-    const auctionImplementation = await hre.viem.deployContract("NFTAuction");
-
-    const auctionProxy = await hre.viem.deployContract("ERC1967Proxy", [
-      auctionImplementation.address,
-      "0x",
-    ]);
-
-    const auction = await hre.viem.getContractAt("NFTAuction", auctionProxy.address);
+    const auction = await viem.deployContract("NFTAuction");
 
     await auction.write.initialize([priceOracle.address, feeRecipient.account.address, 250n]);
-    await auction.write.addSupportedBidToken([bidToken.address]);
+    await feeRecipient.writeContract({
+      address: auction.address,
+      abi: auction.abi,
+      functionName: "addSupportedBidToken",
+      args: [bidToken.address]
+    });
 
     await nft.write.mint([seller.account.address, "token-uri-1"]);
     await nft.write.mint([seller.account.address, "token-uri-2"]);
 
     return {
+      viem,
       auction,
-      auctionImplementation,
-      auctionProxy,
       nft,
       priceOracle,
       bidToken,
@@ -64,7 +63,7 @@ describe("NFTAuction Contract", function () {
   }
 
   describe("Initialization", function () {
-    it("Should initialize with correct parameters", async function () {
+    it("应该使用正确的参数初始化", async function () {
       const { auction, priceOracle, feeRecipient } = await deployAuctionFixture();
 
       expect(await auction.read.priceOracle()).to.equal(getAddress(priceOracle.address));
@@ -73,7 +72,7 @@ describe("NFTAuction Contract", function () {
       expect(await auction.read.auctionCounter()).to.equal(0n);
     });
 
-    it("Should set the correct owner", async function () {
+    it("应该设置正确的所有者", async function () {
       const { auction, feeRecipient } = await deployAuctionFixture();
 
       expect(await auction.read.owner()).to.equal(getAddress(feeRecipient.account.address));
@@ -81,34 +80,33 @@ describe("NFTAuction Contract", function () {
   });
 
   describe("Auction Creation", function () {
-    it("Should create a new auction", async function () {
+    it("应该创建新的拍卖", async function () {
       const { auction, nft, seller, publicClient } = await deployAuctionFixture();
 
-      const sellerNft = await hre.viem.getContractAt("NFT", nft.address, {
-        walletClient: seller,
+      const sellerNft = await viem.getContractAt("NFT", nft.address);
+      await seller.writeContract({
+        address: nft.address,
+        abi: sellerNft.abi,
+        functionName: "approve",
+        args: [auction.address, 0n]
       });
-      await sellerNft.write.approve([auction.address, 0n]);
 
-      const sellerAuction = await hre.viem.getContractAt("NFTAuction", auction.address, {
-        walletClient: seller,
-      });
+      const sellerAuction = await viem.getContractAt("NFTAuction", auction.address);
 
       const startPrice = 1000000000n;
       const reservePrice = 5000000000n;
       const duration = 86400n;
 
-      const tx = await sellerAuction.write.createAuction([
-        nft.address,
-        0n,
-        startPrice,
-        reservePrice,
-        500n,
-        duration,
-      ]);
+      const tx = await seller.writeContract({
+        address: auction.address,
+        abi: sellerAuction.abi,
+        functionName: "createAuction",
+        args: [nft.address, 0n, startPrice, reservePrice, 500n, duration]
+      });
 
       await publicClient.waitForTransactionReceipt({ hash: tx });
 
-      const auctionData = await auction.read.auctions([1n]);
+      const auctionData = await auction.read.getAuction([1n]);
       expect(auctionData.seller).to.equal(getAddress(seller.account.address));
       expect(auctionData.nftContract).to.equal(getAddress(nft.address));
       expect(auctionData.tokenId).to.equal(0n);
@@ -116,26 +114,25 @@ describe("NFTAuction Contract", function () {
       expect(auctionData.reservePrice).to.equal(reservePrice);
     });
 
-    it("Should transfer NFT to auction contract", async function () {
+    it("应该将NFT转移到拍卖合约", async function () {
       const { auction, nft, seller } = await deployAuctionFixture();
 
-      const sellerNft = await hre.viem.getContractAt("NFT", nft.address, {
-        walletClient: seller,
+      const sellerNft = await viem.getContractAt("NFT", nft.address);
+      await seller.writeContract({
+        address: nft.address,
+        abi: sellerNft.abi,
+        functionName: "approve",
+        args: [auction.address, 0n]
       });
-      await sellerNft.write.approve([auction.address, 0n]);
 
-      const sellerAuction = await hre.viem.getContractAt("NFTAuction", auction.address, {
-        walletClient: seller,
+      const sellerAuction = await viem.getContractAt("NFTAuction", auction.address);
+
+      await seller.writeContract({
+        address: auction.address,
+        abi: sellerAuction.abi,
+        functionName: "createAuction",
+        args: [nft.address, 0n, 1000000000n, 5000000000n, 500n, 86400n]
       });
-
-      await sellerAuction.write.createAuction([
-        nft.address,
-        0n,
-        1000000000n,
-        5000000000n,
-        500n,
-        86400n,
-      ]);
 
       expect(await nft.read.ownerOf([0n])).to.equal(getAddress(auction.address));
     });
@@ -146,107 +143,115 @@ describe("NFTAuction Contract", function () {
       const base = await deployAuctionFixture();
       const { auction, nft, seller } = base;
 
-      const sellerNft = await hre.viem.getContractAt("NFT", nft.address, {
-        walletClient: seller,
+      const sellerNft = await viem.getContractAt("NFT", nft.address);
+      await seller.writeContract({
+        address: nft.address,
+        abi: sellerNft.abi,
+        functionName: "approve",
+        args: [auction.address, 0n]
       });
-      await sellerNft.write.approve([auction.address, 0n]);
 
-      const sellerAuction = await hre.viem.getContractAt("NFTAuction", auction.address, {
-        walletClient: seller,
+      const sellerAuction = await viem.getContractAt("NFTAuction", auction.address);
+
+      await seller.writeContract({
+        address: auction.address,
+        abi: sellerAuction.abi,
+        functionName: "createAuction",
+        args: [nft.address, 0n, 1000000000n, 5000000000n, 500n, 86400n]
       });
-
-      await sellerAuction.write.createAuction([
-        nft.address,
-        0n,
-        1000000000n,
-        5000000000n,
-        500n,
-        86400n,
-      ]);
 
       return { ...base, auctionId: 1n };
     }
 
-    it("Should place ETH bid", async function () {
+    it("应该进行ETH出价", async function () {
       const { auction, bidder1, auctionId } = await createAuctionFixture();
-
-      const bidder1Auction = await hre.viem.getContractAt("NFTAuction", auction.address, {
-        walletClient: bidder1,
-      });
 
       const bidAmount = parseEther("0.1");
 
-      await bidder1Auction.write.placeBidETH([auctionId], {
-        value: bidAmount,
+      await bidder1.writeContract({
+        address: auction.address,
+        abi: auction.abi,
+        functionName: "placeBidETH",
+        args: [auctionId],
+        value: bidAmount
       });
 
-      const auctionData = await auction.read.auctions([auctionId]);
+      const auctionData = await auction.read.getAuction([auctionId]);
       expect(auctionData.highestBidder).to.equal(getAddress(bidder1.account.address));
       expect(auctionData.highestBidAmount).to.equal(bidAmount);
     });
 
-    it("Should not allow bid below start price", async function () {
+    it("不应该允许低于起拍价的出价", async function (t) {
       const { auction, bidder1, auctionId } = await createAuctionFixture();
 
-      const bidder1Auction = await hre.viem.getContractAt("NFTAuction", auction.address, {
-        walletClient: bidder1,
-      });
+      const bidder1Auction = await viem.getContractAt("NFTAuction", auction.address);
 
       const bidAmount = parseEther("0.001");
 
-      await expect(
-        bidder1Auction.write.placeBidETH([auctionId], {
+      try {
+        await bidder1Auction.write.placeBidETH([auctionId], {
           value: bidAmount,
-        })
-      ).to.be.rejectedWith("Bid: below start price");
+          walletClient: bidder1,
+        });
+        t.fail("交易应该被拒绝");
+      } catch (error: any) {
+        expect(error.message).to.include("投标：低于起拍价");
+      }
     });
 
-    it("Should require minimum bid increment", async function () {
+    it("应该要求最低加价幅度", async function (t) {
       const { auction, bidder1, bidder2, auctionId } = await createAuctionFixture();
 
-      const bidder1Auction = await hre.viem.getContractAt("NFTAuction", auction.address, {
-        walletClient: bidder1,
+      await bidder1.writeContract({
+        address: auction.address,
+        abi: auction.abi,
+        functionName: "placeBidETH",
+        args: [auctionId],
+        value: parseEther("0.1")
       });
 
-      const bidder2Auction = await hre.viem.getContractAt("NFTAuction", auction.address, {
-        walletClient: bidder2,
+      try {
+        await bidder2.writeContract({
+          address: auction.address,
+          abi: auction.abi,
+          functionName: "placeBidETH",
+          args: [auctionId],
+          value: parseEther("0.101")
+        });
+        t.fail("交易应该被拒绝");
+      } catch (error: any) {
+        expect(error.message).to.include("投标：低于最小加价幅度");
+      }
+
+      await bidder2.writeContract({
+        address: auction.address,
+        abi: auction.abi,
+        functionName: "placeBidETH",
+        args: [auctionId],
+        value: parseEther("0.11")
       });
 
-      await bidder1Auction.write.placeBidETH([auctionId], {
-        value: parseEther("0.1"),
-      });
-
-      await expect(
-        bidder2Auction.write.placeBidETH([auctionId], {
-          value: parseEther("0.101"),
-        })
-      ).to.be.rejectedWith("Bid: below minimum increment");
-
-      await bidder2Auction.write.placeBidETH([auctionId], {
-        value: parseEther("0.11"),
-      });
-
-      const auctionData = await auction.read.auctions([auctionId]);
+      const auctionData = await auction.read.getAuction([auctionId]);
       expect(auctionData.highestBidder).to.equal(getAddress(bidder2.account.address));
     });
 
-    it("Should refund previous bidder", async function () {
+    it("退款", async function () {
       const { auction, bidder1, bidder2, auctionId } = await createAuctionFixture();
 
-      const bidder1Auction = await hre.viem.getContractAt("NFTAuction", auction.address, {
-        walletClient: bidder1,
+      await bidder1.writeContract({
+        address: auction.address,
+        abi: auction.abi,
+        functionName: "placeBidETH",
+        args: [auctionId],
+        value: parseEther("0.1")
       });
 
-      const bidder2Auction = await hre.viem.getContractAt("NFTAuction", auction.address, {
-        walletClient: bidder2,
-      });
-
-      await bidder1Auction.write.placeBidETH([auctionId], {
-        value: parseEther("0.1"),
-      });
-
-      await bidder2Auction.write.placeBidETH([auctionId], {
-        value: parseEther("0.15"),
+      await bidder2.writeContract({
+        address: auction.address,
+        abi: auction.abi,
+        functionName: "placeBidETH",
+        args: [auctionId],
+        value: parseEther("0.15")
       });
 
       const pendingReturn = await auction.read.pendingReturns([auctionId, bidder1.account.address]);
@@ -254,122 +259,148 @@ describe("NFTAuction Contract", function () {
     });
   });
 
-  describe("Bidding with ERC20", function () {
+  describe("使用 ERC20 代币进行出价", function () {
     async function createAuctionFixture() {
       const base = await deployAuctionFixture();
       const { auction, nft, seller, bidToken, bidder1 } = base;
 
-      const sellerNft = await hre.viem.getContractAt("NFT", nft.address, {
-        walletClient: seller,
+      const sellerNft = await viem.getContractAt("NFT", nft.address);
+      await seller.writeContract({
+        address: nft.address,
+        abi: sellerNft.abi,
+        functionName: "approve",
+        args: [auction.address, 0n]
       });
-      await sellerNft.write.approve([auction.address, 0n]);
 
-      const sellerAuction = await hre.viem.getContractAt("NFTAuction", auction.address, {
-        walletClient: seller,
+      const sellerAuction = await viem.getContractAt("NFTAuction", auction.address);
+
+      await seller.writeContract({
+        address: auction.address,
+        abi: sellerAuction.abi,
+        functionName: "createAuction",
+        args: [nft.address, 0n, 1000000000n, 5000000000n, 500n, 86400n]
       });
-
-      await sellerAuction.write.createAuction([
-        nft.address,
-        0n,
-        1000000000n,
-        5000000000n,
-        500n,
-        86400n,
-      ]);
 
       await bidToken.write.transfer([bidder1.account.address, 100000n * 10n ** 6n]);
 
       return { ...base, auctionId: 1n };
     }
 
-    it("Should place token bid", async function () {
+    it("发起出价", async function () {
       const { auction, bidToken, bidder1, auctionId } = await createAuctionFixture();
 
-      const bidder1Token = await hre.viem.getContractAt("MockERC20", bidToken.address, {
-        walletClient: bidder1,
+      const bidder1Token = await viem.getContractAt("MockERC20", bidToken.address);
+
+      await bidder1.writeContract({
+        address: bidToken.address,
+        abi: bidder1Token.abi,
+        functionName: "approve",
+        args: [auction.address, 100n * 10n ** 6n]
       });
 
-      const bidder1Auction = await hre.viem.getContractAt("NFTAuction", auction.address, {
-        walletClient: bidder1,
+      await bidder1.writeContract({
+        address: auction.address,
+        abi: auction.abi,
+        functionName: "placeBidToken",
+        args: [auctionId, bidToken.address, 100n * 10n ** 6n]
       });
 
-      await bidder1Token.write.approve([auction.address, 100n * 10n ** 6n]);
-
-      await bidder1Auction.write.placeBidToken([auctionId, bidToken.address, 100n * 10n ** 6n]);
-
-      const auctionData = await auction.read.auctions([auctionId]);
+      const auctionData = await auction.read.getAuction([auctionId]);
       expect(auctionData.highestBidder).to.equal(getAddress(bidder1.account.address));
       expect(auctionData.highestBidAmount).to.equal(100n * 10n ** 6n);
       expect(auctionData.highestBidToken).to.equal(getAddress(bidToken.address));
     });
 
-    it("Should not allow unsupported token", async function () {
+    it("不应该允许不支持的代币", async function (t) {
       const { auction, bidder1, auctionId } = await createAuctionFixture();
 
-      const bidder1Auction = await hre.viem.getContractAt("NFTAuction", auction.address, {
-        walletClient: bidder1,
-      });
+      const bidder1Auction = await viem.getContractAt("NFTAuction", auction.address);
 
-      const unsupportedToken = await hre.viem.deployContract("MockERC20", [
+      const unsupportedToken = await viem.deployContract("MockERC20", [
         "Unsupported",
         "UNS",
         6,
         parseEther("1000000"),
       ]);
 
-      await expect(
-        bidder1Auction.write.placeBidToken([auctionId, unsupportedToken.address, 100n * 10n ** 6n])
-      ).to.be.rejectedWith("Bid: token not supported");
+      try {
+        await bidder1Auction.write.placeBidToken([auctionId, unsupportedToken.address, 100n * 10n ** 6n], { walletClient: bidder1 });
+        t.fail("交易应该被拒绝");
+      } catch (error: any) {
+        expect(error.message).to.include("投标：代币不支持");
+      }
     });
   });
 
   describe("Admin Functions", function () {
-    it("Should update platform fee", async function () {
+    it("应该更新平台费用", async function () {
       const { auction, feeRecipient } = await deployAuctionFixture();
 
-      const feeRecipientAuction = await hre.viem.getContractAt("NFTAuction", auction.address, {
-        walletClient: feeRecipient,
-      });
+      const feeRecipientAuction = await viem.getContractAt("NFTAuction", auction.address);
 
-      await feeRecipientAuction.write.setPlatformFeePercent([500n]);
+      await feeRecipient.writeContract({
+        address: auction.address,
+        abi: feeRecipientAuction.abi,
+        functionName: "setPlatformFeePercent",
+        args: [500n]
+      });
 
       expect(await auction.read.platformFeePercent()).to.equal(500n);
     });
 
-    it("Should not allow fee above maximum", async function () {
+    it("不应该允许费用高于最大值", async function (t) {
       const { auction, feeRecipient } = await deployAuctionFixture();
 
-      const feeRecipientAuction = await hre.viem.getContractAt("NFTAuction", auction.address, {
-        walletClient: feeRecipient,
-      });
+      const feeRecipientAuction = await viem.getContractAt("NFTAuction", auction.address);
 
-      await expect(feeRecipientAuction.write.setPlatformFeePercent([1500n])).to.be.rejectedWith(
-        "Admin: fee too high"
-      );
+      try {
+        await feeRecipient.writeContract({
+          address: auction.address,
+          abi: feeRecipientAuction.abi,
+          functionName: "setPlatformFeePercent",
+          args: [1500n]
+        });
+        t.fail("交易应该被拒绝");
+      } catch (error: any) {
+        expect(error.message).to.include("管理员：费用过高");
+      }
     });
 
-    it("Should pause and unpause contract", async function () {
+    it("应该暂停和取消暂停合约", async function () {
       const { auction, feeRecipient } = await deployAuctionFixture();
 
-      const feeRecipientAuction = await hre.viem.getContractAt("NFTAuction", auction.address, {
-        walletClient: feeRecipient,
-      });
+      const feeRecipientAuction = await viem.getContractAt("NFTAuction", auction.address);
 
-      await feeRecipientAuction.write.pause();
+      await feeRecipient.writeContract({
+        address: auction.address,
+        abi: feeRecipientAuction.abi,
+        functionName: "pause"
+      });
       expect(await auction.read.paused()).to.equal(true);
 
-      await feeRecipientAuction.write.unpause();
+      await feeRecipient.writeContract({
+        address: auction.address,
+        abi: feeRecipientAuction.abi,
+        functionName: "unpause"
+      });
       expect(await auction.read.paused()).to.equal(false);
     });
 
-    it("Should not allow non-owner to pause", async function () {
+    it("不应该允许非所有者暂停合约", async function (t) {
       const { auction, seller } = await deployAuctionFixture();
 
-      const sellerAuction = await hre.viem.getContractAt("NFTAuction", auction.address, {
-        walletClient: seller,
-      });
+      const sellerAuction = await viem.getContractAt("NFTAuction", auction.address);
 
-      await expect(sellerAuction.write.pause()).to.be.rejectedWith("OwnableUnauthorizedAccount");
+      try {
+        await seller.writeContract({
+          address: auction.address,
+          abi: sellerAuction.abi,
+          functionName: "pause"
+        });
+        t.fail("交易应该被拒绝");
+      } catch (error: any) {
+        expect(error.message).to.include("OwnableUnauthorizedAccount");
+      }
     });
   });
 });

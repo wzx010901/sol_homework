@@ -6,23 +6,23 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title PriceOracle
- * @notice Contract to get price feeds from Chainlink for ETH and ERC20 tokens
+ * @notice 从Chainlink获取ETH和ERC20代币价格的合约
  */
 contract PriceOracle is Ownable {
     
-    // Mapping from token address to price feed address
+    // 从代币地址到价格预言机地址的映射
     mapping(address => AggregatorV3Interface) public priceFeeds;
     
-    // Mapping to check if a token has a price feed
+    // 检查代币是否有价格预言机的映射
     mapping(address => bool) public hasPriceFeed;
     
-    // Price feed for ETH/USD
+    // ETH/USD价格预言机
     AggregatorV3Interface public ethUsdPriceFeed;
     
-    // Decimals for USD price (8 decimals for Chainlink USD feeds)
+    // USD价格的小数位（Chainlink USD价格为8位小数）
     uint8 public constant USD_DECIMALS = 8;
     
-    // Decimals for ETH (18 decimals)
+    // ETH的小数位（18位小数）
     uint8 public constant ETH_DECIMALS = 18;
     
     event PriceFeedAdded(address indexed token, address indexed priceFeed);
@@ -30,19 +30,19 @@ contract PriceOracle is Ownable {
     event EthUsdPriceFeedUpdated(address indexed priceFeed);
     
     constructor(address _ethUsdPriceFeed) Ownable(msg.sender) {
-        require(_ethUsdPriceFeed != address(0), "PriceOracle: invalid ETH/USD price feed");
+        require(_ethUsdPriceFeed != address(0), unicode"价格预言机：无效的ETH/USD价格预言机");
         ethUsdPriceFeed = AggregatorV3Interface(_ethUsdPriceFeed);
         emit EthUsdPriceFeedUpdated(_ethUsdPriceFeed);
     }
     
     /**
-     * @notice Add a price feed for a token
-     * @param token The token address
-     * @param priceFeed The Chainlink price feed address
+     * @notice 为代币添加价格预言机
+     * @param token 代币地址
+     * @param priceFeed Chainlink价格预言机地址
      */
     function addPriceFeed(address token, address priceFeed) external onlyOwner {
-        require(token != address(0), "PriceOracle: invalid token address");
-        require(priceFeed != address(0), "PriceOracle: invalid price feed address");
+        require(token != address(0), unicode"价格预言机：无效的代币地址");
+        require(priceFeed != address(0), unicode"价格预言机：无效的价格预言机地址");
         
         priceFeeds[token] = AggregatorV3Interface(priceFeed);
         hasPriceFeed[token] = true;
@@ -51,11 +51,11 @@ contract PriceOracle is Ownable {
     }
     
     /**
-     * @notice Remove a price feed for a token
-     * @param token The token address
+     * @notice 移除代币的价格预言机
+     * @param token 代币地址
      */
     function removePriceFeed(address token) external onlyOwner {
-        require(hasPriceFeed[token], "PriceOracle: no price feed for token");
+        require(hasPriceFeed[token], unicode"价格预言机：代币没有价格预言机");
         
         delete priceFeeds[token];
         hasPriceFeed[token] = false;
@@ -64,19 +64,19 @@ contract PriceOracle is Ownable {
     }
     
     /**
-     * @notice Update the ETH/USD price feed
-     * @param _ethUsdPriceFeed The new ETH/USD price feed address
+     * @notice 更新ETH/USD价格预言机
+     * @param _ethUsdPriceFeed 新的ETH/USD价格预言机地址
      */
     function setEthUsdPriceFeed(address _ethUsdPriceFeed) external onlyOwner {
-        require(_ethUsdPriceFeed != address(0), "PriceOracle: invalid price feed");
+        require(_ethUsdPriceFeed != address(0), unicode"价格预言机：无效的价格预言机");
         ethUsdPriceFeed = AggregatorV3Interface(_ethUsdPriceFeed);
         emit EthUsdPriceFeedUpdated(_ethUsdPriceFeed);
     }
     
     /**
-     * @notice Get the latest ETH price in USD
-     * @return price The ETH price in USD (8 decimals)
-     * @return timestamp The timestamp of the price update
+     * @notice 获取最新的ETH价格（USD）
+     * @return price ETH价格（USD，8位小数）
+     * @return timestamp 价格更新的时间戳
      */
     function getEthPrice() public view returns (uint256 price, uint256 timestamp) {
         (
@@ -87,23 +87,23 @@ contract PriceOracle is Ownable {
             uint80 answeredInRound
         ) = ethUsdPriceFeed.latestRoundData();
         
-        require(answer > 0, "PriceOracle: invalid ETH price");
-        require(updatedAt > 0, "PriceOracle: incomplete round");
+        require(answer > 0, unicode"价格预言机：无效的ETH价格");
+        require(updatedAt > 0, unicode"价格预言机：轮次不完整");
         
-        // Check if price is not stale (within 1 hour)
-        require(block.timestamp - updatedAt <= 3600, "PriceOracle: stale ETH price");
+        // 检查价格是否新鲜（1小时内）
+        require(block.timestamp - updatedAt <= 3600, unicode"价格预言机：ETH价格过期");
         
         return (uint256(answer), updatedAt);
     }
     
     /**
-     * @notice Get the latest token price in USD
-     * @param token The token address
-     * @return price The token price in USD (8 decimals)
-     * @return timestamp The timestamp of the price update
+     * @notice 获取最新的代币价格（USD）
+     * @param token 代币地址
+     * @return price 代币价格（USD，8位小数）
+     * @return timestamp 价格更新的时间戳
      */
     function getTokenPrice(address token) public view returns (uint256 price, uint256 timestamp) {
-        require(hasPriceFeed[token], "PriceOracle: no price feed for token");
+        require(hasPriceFeed[token], unicode"价格预言机：代币没有价格预言机");
         
         (
             uint80 roundID,
@@ -113,36 +113,36 @@ contract PriceOracle is Ownable {
             uint80 answeredInRound
         ) = priceFeeds[token].latestRoundData();
         
-        require(answer > 0, "PriceOracle: invalid token price");
-        require(updatedAt > 0, "PriceOracle: incomplete round");
+        require(answer > 0, unicode"价格预言机：无效的代币价格");
+        require(updatedAt > 0, unicode"价格预言机：轮次不完整");
         
-        // Check if price is not stale (within 1 hour)
-        require(block.timestamp - updatedAt <= 3600, "PriceOracle: stale token price");
+        // 检查价格是否新鲜（1小时内）
+        require(block.timestamp - updatedAt <= 3600, unicode"价格预言机：代币价格过期");
         
         return (uint256(answer), updatedAt);
     }
     
     /**
-     * @notice Convert ETH amount to USD value
-     * @param ethAmount The amount of ETH (18 decimals)
-     * @return usdValue The USD value (8 decimals)
+     * @notice 将ETH数量转换为USD价值
+     * @param ethAmount ETH数量（18位小数）
+     * @return usdValue USD价值（8位小数）
      */
     function ethToUsd(uint256 ethAmount) public view returns (uint256 usdValue) {
         (uint256 ethPrice, ) = getEthPrice();
         
-        // ethAmount is in 18 decimals, ethPrice is in 8 decimals
-        // Result should be in 8 decimals
+        // ethAmount是18位小数，ethPrice是8位小数
+        // 结果应该是8位小数
         usdValue = (ethAmount * ethPrice) / 10**ETH_DECIMALS;
         
         return usdValue;
     }
     
     /**
-     * @notice Convert token amount to USD value
-     * @param token The token address
-     * @param tokenAmount The amount of tokens
-     * @param tokenDecimals The decimals of the token
-     * @return usdValue The USD value (8 decimals)
+     * @notice 将代币数量转换为USD价值
+     * @param token 代币地址
+     * @param tokenAmount 代币数量
+     * @param tokenDecimals 代币的小数位
+     * @return usdValue USD价值（8位小数）
      */
     function tokenToUsd(address token, uint256 tokenAmount, uint8 tokenDecimals) 
         public 
@@ -151,34 +151,34 @@ contract PriceOracle is Ownable {
     {
         (uint256 tokenPrice, ) = getTokenPrice(token);
         
-        // tokenAmount is in tokenDecimals, tokenPrice is in 8 decimals
-        // Result should be in 8 decimals
+        // tokenAmount是tokenDecimals位小数，tokenPrice是8位小数
+        // 结果应该是8位小数
         usdValue = (tokenAmount * tokenPrice) / 10**tokenDecimals;
         
         return usdValue;
     }
     
     /**
-     * @notice Convert USD value to ETH amount
-     * @param usdValue The USD value (8 decimals)
-     * @return ethAmount The ETH amount (18 decimals)
+     * @notice 将USD价值转换为ETH数量
+     * @param usdValue USD价值（8位小数）
+     * @return ethAmount ETH数量（18位小数）
      */
     function usdToEth(uint256 usdValue) public view returns (uint256 ethAmount) {
         (uint256 ethPrice, ) = getEthPrice();
         
-        // usdValue is in 8 decimals, ethPrice is in 8 decimals
-        // Result should be in 18 decimals
+        // usdValue是8位小数，ethPrice是8位小数
+        // 结果应该是18位小数
         ethAmount = (usdValue * 10**ETH_DECIMALS) / ethPrice;
         
         return ethAmount;
     }
     
     /**
-     * @notice Convert USD value to token amount
-     * @param token The token address
-     * @param usdValue The USD value (8 decimals)
-     * @param tokenDecimals The decimals of the token
-     * @return tokenAmount The token amount
+     * @notice 将USD价值转换为代币数量
+     * @param token 代币地址
+     * @param usdValue USD价值（8位小数）
+     * @param tokenDecimals 代币的小数位
+     * @return tokenAmount 代币数量
      */
     function usdToToken(address token, uint256 usdValue, uint8 tokenDecimals) 
         public 
@@ -187,22 +187,22 @@ contract PriceOracle is Ownable {
     {
         (uint256 tokenPrice, ) = getTokenPrice(token);
         
-        // usdValue is in 8 decimals, tokenPrice is in 8 decimals
-        // Result should be in tokenDecimals
+        // usdValue是8位小数，tokenPrice是8位小数
+        // 结果应该是tokenDecimals位小数
         tokenAmount = (usdValue * 10**tokenDecimals) / tokenPrice;
         
         return tokenAmount;
     }
     
     /**
-     * @notice Compare two bids in USD value
-     * @param bid1Amount First bid amount
-     * @param bid1Token First bid token address (address(0) for ETH)
-     * @param bid1Decimals First bid token decimals
-     * @param bid2Amount Second bid amount
-     * @param bid2Token Second bid token address (address(0) for ETH)
-     * @param bid2Decimals Second bid token decimals
-     * @return comparison 1 if bid1 > bid2, 0 if equal, -1 if bid1 < bid2
+     * @notice 比较两个投标的USD价值
+     * @param bid1Amount 第一个投标金额
+     * @param bid1Token 第一个投标代币地址（ETH为address(0)）
+     * @param bid1Decimals 第一个投标代币的小数位
+     * @param bid2Amount 第二个投标金额
+     * @param bid2Token 第二个投标代币地址（ETH为address(0)）
+     * @param bid2Decimals 第二个投标代币的小数位
+     * @return comparison 1表示bid1>bid2，0表示相等，-1表示bid1<bid2
      */
     function compareBids(
         uint256 bid1Amount,
@@ -239,18 +239,18 @@ contract PriceOracle is Ownable {
     }
     
     /**
-     * @notice Get the number of decimals for ETH/USD price feed
+     * @notice 获取ETH/USD价格预言机的小数位数
      */
     function getEthPriceDecimals() external view returns (uint8) {
         return ethUsdPriceFeed.decimals();
     }
     
     /**
-     * @notice Get the number of decimals for a token price feed
-     * @param token The token address
+     * @notice 获取代币价格预言机的小数位数
+     * @param token 代币地址
      */
     function getTokenPriceDecimals(address token) external view returns (uint8) {
-        require(hasPriceFeed[token], "PriceOracle: no price feed for token");
+        require(hasPriceFeed[token], unicode"价格预言机：代币没有价格预言机");
         return priceFeeds[token].decimals();
     }
 }

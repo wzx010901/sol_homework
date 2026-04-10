@@ -1,27 +1,31 @@
 import { expect } from "chai";
-import hre from "hardhat";
+import { network } from "hardhat";
 import { getAddress, parseEther } from "viem";
+import { describe, it } from "node:test";
 
-describe("PriceOracle Contract", function () {
+describe("PriceOracle 合约", async function () {
+  const { viem } = await network.connect();
+
   async function deployPriceOracleFixture() {
-    const [owner, addr1] = await hre.viem.getWalletClients();
-    const publicClient = await hre.viem.getPublicClient();
+    const [owner, addr1] = await viem.getWalletClients();
+    const publicClient = await viem.getPublicClient();
 
-    const ethPriceFeed = await hre.viem.deployContract("MockV3Aggregator", [
+    const ethPriceFeed = await viem.deployContract("MockV3Aggregator", [
       8, // decimals
       200000000000n, // $2000.00 (8 decimals)
     ]);
 
-    const tokenPriceFeed = await hre.viem.deployContract("MockV3Aggregator", [
+    const tokenPriceFeed = await viem.deployContract("MockV3Aggregator", [
       8, // decimals
       100000000n, // $1.00 (8 decimals)
     ]);
 
-    const priceOracle = await hre.viem.deployContract("PriceOracle", [
+    const priceOracle = await viem.deployContract("PriceOracle", [
       ethPriceFeed.address,
     ]);
 
     return {
+      viem,
       priceOracle,
       ethPriceFeed,
       tokenPriceFeed,
@@ -35,7 +39,7 @@ describe("PriceOracle Contract", function () {
     it("Should set the correct ETH price feed", async function () {
       const { priceOracle, ethPriceFeed } = await deployPriceOracleFixture();
 
-      expect(await priceOracle.read.ethPriceFeed()).to.equal(
+      expect(await priceOracle.read.ethUsdPriceFeed()).to.equal(
         getAddress(ethPriceFeed.address)
       );
     });
@@ -53,8 +57,8 @@ describe("PriceOracle Contract", function () {
     it("Should return correct ETH price in USD", async function () {
       const { priceOracle } = await deployPriceOracleFixture();
 
-      const ethPrice = await priceOracle.read.getLatestEthPrice();
-      expect(ethPrice).to.equal(200000000000n);
+      const [price] = await priceOracle.read.getEthPrice();
+      expect(price).to.equal(200000000000n);
     });
 
     it("Should convert ETH to USD correctly", async function () {
@@ -63,7 +67,7 @@ describe("PriceOracle Contract", function () {
       const ethAmount = parseEther("1"); // 1 ETH
       const usdValue = await priceOracle.read.ethToUsd([ethAmount]);
 
-      expect(usdValue).to.equal(2000000000000000000000n); // $2000
+      expect(usdValue).to.equal(200000000000n); // $2000 (8 decimals)
     });
 
     it("Should convert USD to ETH correctly", async function () {
@@ -81,20 +85,21 @@ describe("PriceOracle Contract", function () {
       const { priceOracle, tokenPriceFeed, owner, publicClient } =
         await deployPriceOracleFixture();
 
-      const mockToken = await hre.viem.deployContract("MockERC20", [
+      const mockToken = await viem.deployContract("MockERC20", [
         "Mock Token",
         "MTK",
         18,
+        parseEther("1000000"),
       ]);
 
-      const tx = await priceOracle.write.addTokenPriceFeed([
+      const tx = await priceOracle.write.addPriceFeed([
         mockToken.address,
         tokenPriceFeed.address,
       ]);
       await publicClient.waitForTransactionReceipt({ hash: tx });
 
       expect(
-        await priceOracle.read.tokenPriceFeeds([mockToken.address])
+        await priceOracle.read.priceFeeds([mockToken.address])
       ).to.equal(getAddress(tokenPriceFeed.address));
     });
 
@@ -102,13 +107,14 @@ describe("PriceOracle Contract", function () {
       const { priceOracle, tokenPriceFeed, owner, publicClient } =
         await deployPriceOracleFixture();
 
-      const mockToken = await hre.viem.deployContract("MockERC20", [
+      const mockToken = await viem.deployContract("MockERC20", [
         "Mock Token",
         "MTK",
         18,
+        parseEther("1000000"),
       ]);
 
-      await priceOracle.write.addTokenPriceFeed([
+      await priceOracle.write.addPriceFeed([
         mockToken.address,
         tokenPriceFeed.address,
       ]);
@@ -120,7 +126,7 @@ describe("PriceOracle Contract", function () {
         18,
       ]);
 
-      expect(usdValue).to.equal(100000000000000000000n); // $100 (8 decimals)
+      expect(usdValue).to.equal(10000000000n); // $100 (8 decimals)
     });
   });
 });

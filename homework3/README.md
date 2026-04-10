@@ -85,41 +85,4 @@ npx hardhat test
 npx hardhat ignition deploy ./ignition/modules/NFTAuctionDeployment.ts --network sepolia
 ```
 
-## 技术栈
 
-- Solidity 0.8.28
-- Hardhat 3.x
-- OpenZeppelin Contracts 5.x
-- Chainlink Contracts
-- TypeScript
-- Viem
-
-## 安全特性
-
-- 重入攻击防护（ReentrancyGuard）
-- 访问控制（Ownable）
-- 可暂停（Pausable）
-- 安全的 ERC20 代币转移（SafeERC20）
-- 合约升级（UUPSProxy）
-
-## 注意事项
-
-- 部署前请确保 .env 文件中的私钥和 API 密钥正确配置
-# Sepolia Testnet
-SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161
-SEPOLIA_PRIVATE_KEY=0x0000000000000000000000000000000000000000000000000000000000000000
-
-# Mainnet
-MAINNET_RPC_URL=https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161
-MAINNET_PRIVATE_KEY=0x0000000000000000000000000000000000000000000000000000000000000000
-
-# Etherscan
-ETHERSCAN_API_KEY=your_etherscan_api_key-
-
-- 测试网部署需要足够的测试币
-- 生产环境部署前请进行全面的安全审计
-
-## 额外功能
-
-- 动态手续费：根据拍卖金额动态调整手续费
-- 多代币支持：可添加多种 ERC20 代币作为出价代币

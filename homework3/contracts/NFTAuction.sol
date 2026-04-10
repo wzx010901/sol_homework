@@ -14,8 +14,8 @@ import "./PriceOracle.sol";
 
 /**
  * @title NFTAuction
- * @notice A decentralized NFT auction marketplace with Chainlink price oracle integration
- * @dev Uses UUPS proxy pattern for upgradeability
+ * @notice 去中心化NFT拍卖市场，集成Chainlink价格预言机
+ * @dev 使用UUPS代理模式实现可升级性
  */
 contract NFTAuction is Initializable, ReentrancyGuard, Pausable, Ownable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
@@ -119,26 +119,25 @@ contract NFTAuction is Initializable, ReentrancyGuard, Pausable, Ownable, UUPSUp
     event AuctionExtended(uint256 indexed auctionId, uint256 newEndTime);
     
     modifier auctionExists(uint256 auctionId) {
-        require(auctions[auctionId].seller != address(0), "Auction: does not exist");
+        require(auctions[auctionId].seller != address(0), unicode"拍卖：拍卖不存在");
         _;
     }
     
     modifier auctionActive(uint256 auctionId) {
-        require(block.timestamp >= auctions[auctionId].startTime, "Auction: not started");
-        require(block.timestamp <= auctions[auctionId].endTime, "Auction: ended");
-        require(!auctions[auctionId].ended, "Auction: already ended");
+        require(block.timestamp >= auctions[auctionId].startTime, unicode"拍卖：拍卖未开始");
+        require(block.timestamp <= auctions[auctionId].endTime, unicode"拍卖：拍卖已结束");
+        require(!auctions[auctionId].ended, unicode"拍卖：拍卖已经结束");
         _;
     }
     
     modifier auctionEnded(uint256 auctionId) {
         require(block.timestamp > auctions[auctionId].endTime || auctions[auctionId].ended, 
-                "Auction: not ended");
+                unicode"拍卖：拍卖未结束");
         _;
     }
     
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() Ownable(msg.sender) {
-        _disableInitializers();
     }
     
     function initialize(
@@ -146,9 +145,9 @@ contract NFTAuction is Initializable, ReentrancyGuard, Pausable, Ownable, UUPSUp
         address _feeRecipient,
         uint256 _platformFeePercent
     ) public initializer {
-        require(_priceOracle != address(0), "Auction: invalid price oracle");
-        require(_feeRecipient != address(0), "Auction: invalid fee recipient");
-        require(_platformFeePercent <= MAX_PLATFORM_FEE, "Auction: fee too high");
+        require(_priceOracle != address(0), unicode"拍卖：无效的价格预言机");
+        require(_feeRecipient != address(0), unicode"拍卖：无效的费用接收者");
+        require(_platformFeePercent <= MAX_PLATFORM_FEE, unicode"拍卖：费用过高");
         
         _transferOwnership(_feeRecipient);
         
@@ -166,18 +165,18 @@ contract NFTAuction is Initializable, ReentrancyGuard, Pausable, Ownable, UUPSUp
         uint256 minBidIncrement,
         uint256 duration
     ) external whenNotPaused returns (uint256) {
-        require(nftContract != address(0), "Auction: invalid NFT contract");
-        require(duration >= MIN_AUCTION_DURATION, "Auction: duration too short");
-        require(duration <= MAX_AUCTION_DURATION, "Auction: duration too long");
-        require(startPrice > 0, "Auction: start price must be > 0");
-        require(reservePrice >= startPrice, "Auction: reserve price < start price");
+        require(nftContract != address(0), unicode"拍卖：无效的NFT合约");
+        require(duration >= MIN_AUCTION_DURATION, unicode"拍卖：持续时间太短");
+        require(duration <= MAX_AUCTION_DURATION, unicode"拍卖：持续时间太长");
+        require(startPrice > 0, unicode"拍卖：起拍价必须大于0");
+        require(reservePrice >= startPrice, unicode"拍卖：保留价低于起拍价");
         
         IERC721 nft = IERC721(nftContract);
-        require(nft.ownerOf(tokenId) == msg.sender, "Auction: not token owner");
+        require(nft.ownerOf(tokenId) == msg.sender, unicode"拍卖：不是代币所有者");
         require(
             nft.getApproved(tokenId) == address(this) || 
             nft.isApprovedForAll(msg.sender, address(this)),
-            "Auction: contract not approved"
+            unicode"拍卖：合约未获批准"
         );
         
         nft.transferFrom(msg.sender, address(this), tokenId);
@@ -265,9 +264,9 @@ contract NFTAuction is Initializable, ReentrancyGuard, Pausable, Ownable, UUPSUp
         auctionExists(auctionId)
         auctionActive(auctionId)
     {
-        require(token != address(0), "Bid: invalid token");
-        require(supportedBidTokens[token], "Bid: token not supported");
-        require(amount > 0, "Bid: amount must be > 0");
+        require(token != address(0), unicode"投标：无效的代币");
+        require(supportedBidTokens[token], unicode"投标：代币不支持");
+        require(amount > 0, unicode"投标：金额必须大于0");
         
         Auction storage auction = auctions[auctionId];
         uint8 decimals = IERC20Metadata(token).decimals();
@@ -313,8 +312,8 @@ contract NFTAuction is Initializable, ReentrancyGuard, Pausable, Ownable, UUPSUp
         auctionEnded(auctionId)
     {
         Auction storage auction = auctions[auctionId];
-        require(!auction.ended, "Auction: already ended");
-        require(!auction.claimed, "Auction: already claimed");
+        require(!auction.ended, unicode"拍卖：已经结束");
+        require(!auction.claimed, unicode"拍卖：已经领取");
         
         auction.ended = true;
         
@@ -356,9 +355,9 @@ contract NFTAuction is Initializable, ReentrancyGuard, Pausable, Ownable, UUPSUp
         auctionExists(auctionId)
     {
         Auction storage auction = auctions[auctionId];
-        require(auction.ended, "Auction: not ended");
-        require(!auction.claimed, "Auction: already claimed");
-        require(msg.sender == auction.seller, "Auction: not seller");
+        require(auction.ended, unicode"拍卖：未结束");
+        require(!auction.claimed, unicode"拍卖：已经领取");
+        require(msg.sender == auction.seller, unicode"拍卖：不是卖家");
         
         auction.claimed = true;
         
@@ -375,10 +374,10 @@ contract NFTAuction is Initializable, ReentrancyGuard, Pausable, Ownable, UUPSUp
                 
                 if (auction.highestBidToken == address(0)) {
                     (bool feeSuccess, ) = payable(feeRecipient).call{value: platformFee}("");
-                    require(feeSuccess, "Auction: fee transfer failed");
+                    require(feeSuccess, unicode"拍卖：费用转账失败");
                     
                     (bool sellerSuccess, ) = payable(auction.seller).call{value: sellerProceeds}("");
-                    require(sellerSuccess, "Auction: seller transfer failed");
+                    require(sellerSuccess, unicode"拍卖：卖家转账失败");
                 } else {
                     IERC20(auction.highestBidToken).safeTransfer(feeRecipient, platformFee);
                     IERC20(auction.highestBidToken).safeTransfer(auction.seller, sellerProceeds);
@@ -397,12 +396,12 @@ contract NFTAuction is Initializable, ReentrancyGuard, Pausable, Ownable, UUPSUp
     
     function withdraw(uint256 auctionId) external nonReentrant auctionExists(auctionId) {
         uint256 amount = pendingReturns[auctionId][msg.sender];
-        require(amount > 0, "Withdraw: no funds");
+        require(amount > 0, unicode"提现：无资金");
         
         pendingReturns[auctionId][msg.sender] = 0;
         
         (bool success, ) = payable(msg.sender).call{value: amount}("");
-        require(success, "Withdraw: transfer failed");
+        require(success, unicode"提现：转账失败");
         
         emit WithdrawalMade(auctionId, msg.sender, amount);
     }
@@ -413,7 +412,7 @@ contract NFTAuction is Initializable, ReentrancyGuard, Pausable, Ownable, UUPSUp
         auctionExists(auctionId) 
     {
         uint256 amount = pendingTokenReturns[auctionId][token][msg.sender];
-        require(amount > 0, "Withdraw: no tokens");
+        require(amount > 0, unicode"提现：无代币");
         
         pendingTokenReturns[auctionId][token][msg.sender] = 0;
         
@@ -429,8 +428,8 @@ contract NFTAuction is Initializable, ReentrancyGuard, Pausable, Ownable, UUPSUp
         auctionActive(auctionId) 
     {
         Auction storage auction = auctions[auctionId];
-        require(msg.sender == auction.seller, "Auction: not seller");
-        require(auction.highestBidder == address(0), "Auction: bids exist");
+        require(msg.sender == auction.seller, unicode"拍卖：不是卖家");
+        require(auction.highestBidder == address(0), unicode"拍卖：存在投标");
         
         auction.ended = true;
         auction.claimed = true;
@@ -443,7 +442,7 @@ contract NFTAuction is Initializable, ReentrancyGuard, Pausable, Ownable, UUPSUp
     }
     
     function addSupportedBidToken(address token) external onlyOwner {
-        require(token != address(0), "Admin: invalid token");
+        require(token != address(0), unicode"管理员：无效的代币");
         supportedBidTokens[token] = true;
         emit SupportedTokenAdded(token);
     }
@@ -454,19 +453,19 @@ contract NFTAuction is Initializable, ReentrancyGuard, Pausable, Ownable, UUPSUp
     }
     
     function setPlatformFeePercent(uint256 newFeePercent) external onlyOwner {
-        require(newFeePercent <= MAX_PLATFORM_FEE, "Admin: fee too high");
+        require(newFeePercent <= MAX_PLATFORM_FEE, unicode"管理员：费用过高");
         platformFeePercent = newFeePercent;
         emit PlatformFeeUpdated(newFeePercent);
     }
     
     function setFeeRecipient(address newRecipient) external onlyOwner {
-        require(newRecipient != address(0), "Admin: invalid recipient");
+        require(newRecipient != address(0), unicode"管理员：无效的接收者");
         feeRecipient = newRecipient;
         emit FeeRecipientUpdated(newRecipient);
     }
     
     function setPriceOracle(address newOracle) external onlyOwner {
-        require(newOracle != address(0), "Admin: invalid oracle");
+        require(newOracle != address(0), unicode"管理员：无效的预言机");
         priceOracle = PriceOracle(newOracle);
         emit PriceOracleUpdated(newOracle);
     }
@@ -545,7 +544,7 @@ contract NFTAuction is Initializable, ReentrancyGuard, Pausable, Ownable, UUPSUp
         uint256 bidUsdValue
     ) internal view {
         if (auction.highestBidder == address(0)) {
-            require(bidUsdValue >= auction.startPrice, "Bid: below start price");
+            require(bidUsdValue >= auction.startPrice, unicode"投标：低于起拍价");
         } else {
             uint256 highestBidUsd = _getBidUsdValue(
                 auction.highestBidAmount,
@@ -554,7 +553,7 @@ contract NFTAuction is Initializable, ReentrancyGuard, Pausable, Ownable, UUPSUp
             );
             
             uint256 minBidUsd = highestBidUsd + (highestBidUsd * auction.minBidIncrement) / BASIS_POINTS;
-            require(bidUsdValue >= minBidUsd, "Bid: below minimum increment");
+            require(bidUsdValue >= minBidUsd, unicode"投标：低于最小加价幅度");
         }
     }
     

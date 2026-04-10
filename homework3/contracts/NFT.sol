@@ -8,13 +8,13 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract NFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
     
-    // Token ID counter
+    // 代币ID计数器
     uint256 private _tokenIdCounter;
     
-    // Base URI for metadata
+    // 元数据的基础URI
     string private _baseTokenURI;
     
-    // Mapping to track if token URI is frozen
+    // 跟踪代币URI是否被冻结的映射
     mapping(uint256 => bool) private _uriFrozen;
     
     event TokenMinted(address indexed to, uint256 indexed tokenId, string uri);
@@ -49,10 +49,10 @@ contract NFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
     }
     
     /**
-     * @notice Batch mint multiple NFTs
-     * @param to The address to mint tokens to
-     * @param uris Array of token URIs
-     * @return tokenIds Array of newly minted token IDs
+     * @notice 批量铸造多个NFT
+     * @param to 代币铸造地址
+     * @param uris 代币URI数组
+     * @return tokenIds 新铸造代币的ID数组
      */
     function batchMint(address to, string[] memory uris) public returns (uint256[] memory) {
         require(to != address(0), "NFT: mint to zero address");
@@ -77,38 +77,38 @@ contract NFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
     }
     
     /**
-     * @notice Set the base URI for all tokens
-     * @param baseURI The new base URI
+     * @notice 设置所有代币的基础URI
+     * @param baseURI 新的基础URI
      */
     function setBaseURI(string memory baseURI) public onlyOwner {
         _baseTokenURI = baseURI;
     }
     
     /**
-     * @notice Get the base URI
+     * @notice 获取基础URI
      */
     function _baseURI() internal view override returns (string memory) {
         return _baseTokenURI;
     }
     
     /**
-     * @notice Check if a token exists
-     * @param tokenId The token ID to check
+     * @notice 检查代币是否存在
+     * @param tokenId 要检查的代币ID
      */
     function exists(uint256 tokenId) public view returns (bool) {
         return _ownerOf(tokenId) != address(0);
     }
     
     /**
-     * @notice Get the total number of tokens minted
+     * @notice 获取已铸造的代币总数
      */
     function totalMinted() public view returns (uint256) {
         return _tokenIdCounter;
     }
     
     /**
-     * @notice Get all token IDs owned by an address
-     * @param owner The address to query
+     * @notice 获取地址拥有的所有代币ID
+     * @param owner 要查询的地址
      */
     function getTokensByOwner(address owner) public view returns (uint256[] memory) {
         uint256 tokenCount = balanceOf(owner);
