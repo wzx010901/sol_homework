@@ -167,34 +167,4 @@ contract BeggingContract {
         donateStartTime = _newStart;
         donateEndTime = _newEnd;
     }
-
-
-    
 }
-
-
-
-// scripts/callContract.js
-const hre = require("hardhat");
-
-async function main() {
-  // 合约地址
-  const contractAddress = "0x197efaa9a9846e06f3744b69cbca0c86e1a6a8e9";
-  // 从 artifacts 中获取合约 ABI（或直接粘贴 ABI）
-  const MyContract = await hre.ethers.getContractFactory("HelloWorld");
-  const contract = MyContract.attach(contractAddress);
-
-  // 调用只读函数（示例）
-  const result = await contract.getSomeData();
-  console.log("查询结果:", result);
-
-  // 调用写函数（示例，需要 Gas）
-  const tx = await contract.setSomeData(123);
-  await tx.wait();
-  console.log("交易已确认:", tx.hash);
-}
-
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
