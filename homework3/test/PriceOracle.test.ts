@@ -36,7 +36,7 @@ describe("PriceOracle 合约", async function () {
   }
 
   describe("Deployment", function () {
-    it("Should set the correct ETH price feed", async function () {
+    it("设置正确的ETH价格预言机", async function () {
       const { priceOracle, ethPriceFeed } = await deployPriceOracleFixture();
 
       expect(await priceOracle.read.ethUsdPriceFeed()).to.equal(
@@ -44,7 +44,7 @@ describe("PriceOracle 合约", async function () {
       );
     });
 
-    it("Should set the correct owner", async function () {
+    it("设置正确的所有者", async function () {
       const { priceOracle, owner } = await deployPriceOracleFixture();
 
       expect(await priceOracle.read.owner()).to.equal(
@@ -54,14 +54,14 @@ describe("PriceOracle 合约", async function () {
   });
 
   describe("ETH Price", function () {
-    it("Should return correct ETH price in USD", async function () {
+    it("返回正确的ETH价格", async function () {
       const { priceOracle } = await deployPriceOracleFixture();
 
       const [price] = await priceOracle.read.getEthPrice();
       expect(price).to.equal(200000000000n);
     });
 
-    it("Should convert ETH to USD correctly", async function () {
+    it("正确将ETH转换为USD", async function () {
       const { priceOracle } = await deployPriceOracleFixture();
 
       const ethAmount = parseEther("1"); // 1 ETH
@@ -70,7 +70,7 @@ describe("PriceOracle 合约", async function () {
       expect(usdValue).to.equal(200000000000n); // $2000 (8 decimals)
     });
 
-    it("Should convert USD to ETH correctly", async function () {
+    it("正确将USD转换为ETH", async function () {
       const { priceOracle } = await deployPriceOracleFixture();
 
       const usdAmount = 200000000000n; // $2000 (8 decimals)
@@ -81,7 +81,7 @@ describe("PriceOracle 合约", async function () {
   });
 
   describe("Token Price Feeds", function () {
-    it("Should allow owner to add token price feed", async function () {
+    it("允许所有者添加代币价格预言机", async function () {
       const { priceOracle, tokenPriceFeed, owner, publicClient } =
         await deployPriceOracleFixture();
 
@@ -103,7 +103,7 @@ describe("PriceOracle 合约", async function () {
       ).to.equal(getAddress(tokenPriceFeed.address));
     });
 
-    it("Should convert token to USD correctly", async function () {
+    it("正确将代币转换为USD", async function () {
       const { priceOracle, tokenPriceFeed, owner, publicClient } =
         await deployPriceOracleFixture();
 

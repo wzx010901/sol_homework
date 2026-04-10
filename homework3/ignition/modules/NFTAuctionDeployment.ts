@@ -25,24 +25,21 @@ const NFTAuctionDeploymentModule = buildModule("NFTAuctionDeployment", (m) => {
   // Deploy PriceOracle contract
   const priceOracle = m.contract("PriceOracle", [ethUsdPriceFeed]);
 
-  // Deploy NFTAuction implementation
-  const auctionImplementation = m.contract("NFTAuction");
-
-  // Deploy NFTAuction proxy
-  const auctionProxy = m.contract("ERC1967Proxy", [
-    auctionImplementation,
-    m.encodeFunctionCall(auctionImplementation, "initialize", [
-      priceOracle,
-      feeRecipient,
-      platformFeePercent,
-    ]),
-  ]);
+  // Deploy NFTAuction contract
+  const auction = m.contract("NFTAuction", [], {
+    afterDeploy: async (contract, deployment) => {
+      await contract.write.initialize([
+        priceOracle,
+        feeRecipient,
+        platformFeePercent,
+      ]);
+    },
+  });
 
   return {
     nft,
     priceOracle,
-    auctionImplementation,
-    auctionProxy,
+    auction,
   };
 });
 

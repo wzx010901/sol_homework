@@ -63,7 +63,7 @@ describe("NFTAuction 合约", async function () {
   }
 
   describe("Initialization", function () {
-    it("应该使用正确的参数初始化", async function () {
+    it("使用正确的参数初始化", async function () {
       const { auction, priceOracle, feeRecipient } = await deployAuctionFixture();
 
       expect(await auction.read.priceOracle()).to.equal(getAddress(priceOracle.address));
@@ -72,7 +72,7 @@ describe("NFTAuction 合约", async function () {
       expect(await auction.read.auctionCounter()).to.equal(0n);
     });
 
-    it("应该设置正确的所有者", async function () {
+    it("设置正确的所有者", async function () {
       const { auction, feeRecipient } = await deployAuctionFixture();
 
       expect(await auction.read.owner()).to.equal(getAddress(feeRecipient.account.address));
@@ -80,7 +80,7 @@ describe("NFTAuction 合约", async function () {
   });
 
   describe("Auction Creation", function () {
-    it("应该创建新的拍卖", async function () {
+    it("创建新的拍卖", async function () {
       const { auction, nft, seller, publicClient } = await deployAuctionFixture();
 
       const sellerNft = await viem.getContractAt("NFT", nft.address);
@@ -114,7 +114,7 @@ describe("NFTAuction 合约", async function () {
       expect(auctionData.reservePrice).to.equal(reservePrice);
     });
 
-    it("应该将NFT转移到拍卖合约", async function () {
+    it("将NFT转移到拍卖合约", async function () {
       const { auction, nft, seller } = await deployAuctionFixture();
 
       const sellerNft = await viem.getContractAt("NFT", nft.address);
@@ -163,7 +163,7 @@ describe("NFTAuction 合约", async function () {
       return { ...base, auctionId: 1n };
     }
 
-    it("应该进行ETH出价", async function () {
+    it("进行ETH出价", async function () {
       const { auction, bidder1, auctionId } = await createAuctionFixture();
 
       const bidAmount = parseEther("0.1");
@@ -181,7 +181,7 @@ describe("NFTAuction 合约", async function () {
       expect(auctionData.highestBidAmount).to.equal(bidAmount);
     });
 
-    it("不应该允许低于起拍价的出价", async function (t) {
+    it("不允许低于起拍价的出价", async function (t) {
       const { auction, bidder1, auctionId } = await createAuctionFixture();
 
       const bidder1Auction = await viem.getContractAt("NFTAuction", auction.address);
@@ -193,13 +193,13 @@ describe("NFTAuction 合约", async function () {
           value: bidAmount,
           walletClient: bidder1,
         });
-        t.fail("交易应该被拒绝");
+        t.fail("交易被拒绝");
       } catch (error: any) {
         expect(error.message).to.include("投标：低于起拍价");
       }
     });
 
-    it("应该要求最低加价幅度", async function (t) {
+    it("要求最低加价幅度", async function (t) {
       const { auction, bidder1, bidder2, auctionId } = await createAuctionFixture();
 
       await bidder1.writeContract({
@@ -218,7 +218,7 @@ describe("NFTAuction 合约", async function () {
           args: [auctionId],
           value: parseEther("0.101")
         });
-        t.fail("交易应该被拒绝");
+        t.fail("交易被拒绝");
       } catch (error: any) {
         expect(error.message).to.include("投标：低于最小加价幅度");
       }
@@ -311,7 +311,7 @@ describe("NFTAuction 合约", async function () {
       expect(auctionData.highestBidToken).to.equal(getAddress(bidToken.address));
     });
 
-    it("不应该允许不支持的代币", async function (t) {
+    it("不允许不支持的代币", async function (t) {
       const { auction, bidder1, auctionId } = await createAuctionFixture();
 
       const bidder1Auction = await viem.getContractAt("NFTAuction", auction.address);
@@ -325,7 +325,7 @@ describe("NFTAuction 合约", async function () {
 
       try {
         await bidder1Auction.write.placeBidToken([auctionId, unsupportedToken.address, 100n * 10n ** 6n], { walletClient: bidder1 });
-        t.fail("交易应该被拒绝");
+        t.fail("交易被拒绝");
       } catch (error: any) {
         expect(error.message).to.include("投标：代币不支持");
       }
@@ -333,7 +333,7 @@ describe("NFTAuction 合约", async function () {
   });
 
   describe("Admin Functions", function () {
-    it("应该更新平台费用", async function () {
+    it("更新平台费用", async function () {
       const { auction, feeRecipient } = await deployAuctionFixture();
 
       const feeRecipientAuction = await viem.getContractAt("NFTAuction", auction.address);
@@ -348,7 +348,7 @@ describe("NFTAuction 合约", async function () {
       expect(await auction.read.platformFeePercent()).to.equal(500n);
     });
 
-    it("不应该允许费用高于最大值", async function (t) {
+    it("不允许费用高于最大值", async function (t) {
       const { auction, feeRecipient } = await deployAuctionFixture();
 
       const feeRecipientAuction = await viem.getContractAt("NFTAuction", auction.address);
@@ -360,13 +360,13 @@ describe("NFTAuction 合约", async function () {
           functionName: "setPlatformFeePercent",
           args: [1500n]
         });
-        t.fail("交易应该被拒绝");
+        t.fail("交易被拒绝");
       } catch (error: any) {
         expect(error.message).to.include("管理员：费用过高");
       }
     });
 
-    it("应该暂停和取消暂停合约", async function () {
+    it("暂停和取消合约", async function () {
       const { auction, feeRecipient } = await deployAuctionFixture();
 
       const feeRecipientAuction = await viem.getContractAt("NFTAuction", auction.address);
@@ -386,7 +386,7 @@ describe("NFTAuction 合约", async function () {
       expect(await auction.read.paused()).to.equal(false);
     });
 
-    it("不应该允许非所有者暂停合约", async function (t) {
+    it("不允许非所有者暂停合约", async function (t) {
       const { auction, seller } = await deployAuctionFixture();
 
       const sellerAuction = await viem.getContractAt("NFTAuction", auction.address);
@@ -397,7 +397,7 @@ describe("NFTAuction 合约", async function () {
           abi: sellerAuction.abi,
           functionName: "pause"
         });
-        t.fail("交易应该被拒绝");
+        t.fail("交易被拒绝");
       } catch (error: any) {
         expect(error.message).to.include("OwnableUnauthorizedAccount");
       }
