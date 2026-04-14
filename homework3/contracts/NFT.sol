@@ -35,7 +35,7 @@ contract NFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
      * @return tokenId 新铸造代币的 ID
      */
     function mint(address to, string memory uri) public returns (uint256) {
-        require(to != address(0), "NFT: mint to zero address");
+        require(to != address(0), unicode"NFT：铸造到零地址");
         
         uint256 tokenId = _tokenIdCounter;
         _tokenIdCounter++;
@@ -55,9 +55,9 @@ contract NFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
      * @return tokenIds 新铸造代币的ID数组
      */
     function batchMint(address to, string[] memory uris) public returns (uint256[] memory) {
-        require(to != address(0), "NFT: mint to zero address");
-        require(uris.length > 0, "NFT: empty URIs array");
-        require(uris.length <= 50, "NFT: batch size too large");
+        require(to != address(0), unicode"NFT：铸造到零地址");
+        require(uris.length > 0, unicode"NFT：URI数组为空");
+        require(uris.length <= 50, unicode"NFT：批量大小过大");
         
         uint256[] memory tokenIds = new uint256[](uris.length);
         

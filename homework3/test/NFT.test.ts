@@ -26,23 +26,23 @@ describe("NFT 合约", async function () {
     };
   }
 
-  describe("Deployment", function () {
-    it("Should set the correct name and symbol", async function () {
+  describe("部署", function () {
+    it("设置正确的名称和符号", async function () {
       const { nft } = await deployNFTFixture();
 
       expect(await nft.read.name()).to.equal("Test NFT");
       expect(await nft.read.symbol()).to.equal("TNFT");
     });
 
-    it("Should set the correct owner", async function () {
+    it("设置正确的所有者", async function () {
       const { nft, owner } = await deployNFTFixture();
 
       expect(await nft.read.owner()).to.equal(getAddress(owner.account.address));
     });
   });
 
-  describe("Minting", function () {
-    it("Should mint a new token", async function () {
+  describe("铸造", function () {
+    it("铸造新代币", async function () {
       const { nft, addr1, publicClient } = await deployNFTFixture();
 
       const tx = await nft.write.mint([addr1.account.address, "token-uri-1"]);
@@ -53,7 +53,7 @@ describe("NFT 合约", async function () {
       expect(await nft.read.tokenURI([0n])).to.equal("https://api.example.com/metadata/token-uri-1");
     });
 
-    it("Should allow owner to mint multiple tokens", async function () {
+    it("允许所有者铸造多个代币", async function () {
       const { nft, addr1, addr2, publicClient } = await deployNFTFixture();
 
       const tx1 = await nft.write.mint([addr1.account.address, "token-uri-1"]);
@@ -69,8 +69,8 @@ describe("NFT 合约", async function () {
     });
   });
 
-  describe("Transfers", function () {
-    it("Should transfer token between accounts", async function () {
+  describe("转移", function () {
+    it("在账户之间转移代币", async function () {
       const { nft, addr1, addr2, publicClient } = await deployNFTFixture();
 
       const mintTx = await nft.write.mint([addr1.account.address, "token-uri-1"]);

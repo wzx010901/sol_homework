@@ -11,6 +11,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "./PriceOracle.sol";
+import "hardhat/console.sol";
 
 /**
  * @title NFTAuction
@@ -148,9 +149,7 @@ contract NFTAuction is Initializable, ReentrancyGuard, Pausable, Ownable, UUPSUp
         require(_priceOracle != address(0), unicode"拍卖：无效的价格预言机");
         require(_feeRecipient != address(0), unicode"拍卖：无效的费用接收者");
         require(_platformFeePercent <= MAX_PLATFORM_FEE, unicode"拍卖：费用过高");
-        
         _transferOwnership(_feeRecipient);
-        
         priceOracle = PriceOracle(_priceOracle);
         feeRecipient = _feeRecipient;
         platformFeePercent = _platformFeePercent;

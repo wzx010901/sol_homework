@@ -62,7 +62,7 @@ describe("NFTAuction 合约", async function () {
     };
   }
 
-  describe("Initialization", function () {
+  describe("初始化", function () {
     it("使用正确的参数初始化", async function () {
       const { auction, priceOracle, feeRecipient } = await deployAuctionFixture();
 
@@ -79,7 +79,7 @@ describe("NFTAuction 合约", async function () {
     });
   });
 
-  describe("Auction Creation", function () {
+  describe("创建拍卖", function () {
     it("创建新的拍卖", async function () {
       const { auction, nft, seller, publicClient } = await deployAuctionFixture();
 
@@ -138,7 +138,7 @@ describe("NFTAuction 合约", async function () {
     });
   });
 
-  describe("Bidding with ETH", function () {
+  describe("使用ETH出价", function () {
     async function createAuctionFixture() {
       const base = await deployAuctionFixture();
       const { auction, nft, seller } = base;
@@ -332,7 +332,7 @@ describe("NFTAuction 合约", async function () {
     });
   });
 
-  describe("Admin Functions", function () {
+  describe("管理员功能", function () {
     it("更新平台费用", async function () {
       const { auction, feeRecipient } = await deployAuctionFixture();
 

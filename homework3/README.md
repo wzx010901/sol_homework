@@ -85,4 +85,32 @@ npx hardhat test
 npx hardhat ignition deploy ./ignition/modules/NFTAuctionDeployment.ts --network sepolia
 ```
 
+### delegatecall 跟 call 的区别是什么
 
+### call 函数
+- 执行环境 ：在被调用合约的上下文中执行，使用被调用合约的存储。
+- msg.sender ：在被调用合约中， msg.sender 是调用合约的地址。
+- 适用场景 ：常规的合约间调用，例如调用其他合约的函数来完成特定任务。
+###  delegatecall 函数
+- 执行环境 ：在调用合约的上下文中执行，使用调用合约的存储。
+- msg.sender ：在执行被调用合约的代码时， msg.sender 保持为原始调用者的地址（不是调用合约的地址）。
+- 适用场景 ：代理模式（Proxy Pattern），例如可升级合约、库函数调用等。
+
+call 修改被调用合约的状态，而 delegatecall 修改调用合约的状态。
+
+### 销毁合约 销毁合约并将剩余ETH发送到指定地址
+function destroy(address payable recipient) external onlyOwner {
+    selfdestruct(recipient);
+}
+
+### 升级合约的执行流程是什么（user -> proxy -> implementation）
+用户调用代理合约，代理合约通过 delegatecall 转发调用到当前实现合约执行逻辑并返回结果；升级时，管理员更新代理合约中存储的实现合约地址，后续调用将转发到新的实现合约，同时保持存储状态的连续性。
+
+### 代理合约上本身是有存储的，怎么避免跟逻辑合约上的存储产生冲突
+代理合约通过使用固定的存储槽（如EIP-1967定义的槽位）存储自身必要数据（如实现合约地址），逻辑合约则从不同的存储槽位开始定义状态变量，从而避免存储布局重叠导致的冲突。
+
+### 逻辑合约升级的存储冲突问题
+逻辑合约升级时，由于代理模式下代理与逻辑合约共享存储，若逻辑合约的存储布局（如状态变量的顺序、类型）发生变更，会导致存储位置重叠，从而引发数据错乱或功能异常的问题。
+
+### 可以在逻辑合约的构造函数中初始化变量吗？为什么
+不可以，因为逻辑合约的构造函数只在其自身部署时执行，而代理合约通过delegatecall调用逻辑合约时不会触发构造函数，导致初始化无法应用到代理合约的存储中。

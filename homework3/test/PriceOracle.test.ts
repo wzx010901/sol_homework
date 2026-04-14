@@ -35,7 +35,7 @@ describe("PriceOracle 合约", async function () {
     };
   }
 
-  describe("Deployment", function () {
+  describe("部署", function () {
     it("设置正确的ETH价格预言机", async function () {
       const { priceOracle, ethPriceFeed } = await deployPriceOracleFixture();
 
@@ -53,7 +53,7 @@ describe("PriceOracle 合约", async function () {
     });
   });
 
-  describe("ETH Price", function () {
+  describe("ETH价格", function () {
     it("返回正确的ETH价格", async function () {
       const { priceOracle } = await deployPriceOracleFixture();
 
@@ -80,7 +80,7 @@ describe("PriceOracle 合约", async function () {
     });
   });
 
-  describe("Token Price Feeds", function () {
+  describe("代币价格预言机", function () {
     it("允许所有者添加代币价格预言机", async function () {
       const { priceOracle, tokenPriceFeed, owner, publicClient } =
         await deployPriceOracleFixture();
